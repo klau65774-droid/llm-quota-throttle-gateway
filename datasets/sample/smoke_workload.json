@@ -1,0 +1,41 @@
+{
+  "name": "smoke_workload",
+  "description": "Tiny deterministic LLM gateway request slice for smoke and contract checks",
+  "rpm_limit": 8,
+  "tpm_limit": 12000,
+  "window_seconds": 60,
+  "events": [
+    {
+      "tenant_id": "tenant-alpha",
+      "model": "gpt-4o-mini",
+      "prompt_tokens": 420,
+      "max_completion_tokens": 800,
+      "actual_completion_tokens": 140,
+      "priority": 1
+    },
+    {
+      "tenant_id": "tenant-alpha",
+      "model": "gpt-4o-mini",
+      "prompt_tokens": 680,
+      "max_completion_tokens": 1200,
+      "actual_completion_tokens": 220,
+      "priority": 1
+    },
+    {
+      "tenant_id": "tenant-burst",
+      "model": "gpt-4o",
+      "prompt_tokens": 3500,
+      "max_completion_tokens": 4000,
+      "actual_completion_tokens": 900,
+      "priority": 3
+    },
+    {
+      "tenant_id": "tenant-beta",
+      "model": "claude-3-5-sonnet",
+      "prompt_tokens": 510,
+      "max_completion_tokens": 600,
+      "actual_completion_tokens": 180,
+      "priority": 2
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "upstream_repo": "https://github.com/ZhuoZhuoCrayon/throttled-py",
+  "version": "3.5.0",
+  "commit_sha": "d20114067281038e5c5fb8de71d30a609d3cb7f9",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2025 crayon",
+  "notes": "Verbatim unmodified snapshot of throttled/, tests/, LICENSE, and pyproject.toml used strictly for dual-mode baseline comparisons and upstream compatibility verification."
+}

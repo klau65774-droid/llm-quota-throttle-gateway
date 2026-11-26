@@ -1,0 +1,331 @@
+from collections.abc import Callable
+from functools import partial
+from typing import Any, cast
+
+import pytest
+from throttled import RateLimiterType, Throttled, per_sec, rate_limiter, store
+from throttled.exceptions import BaseThrottledError, DataError, LimitedError
+from throttled.hooks import Hook
+from throttled.rate_limiter import RateLimitResult
+from throttled.types import TimeLikeValueT
+from throttled.utils import Timer
+
+# Test constants
+EXPECTED_SUM = 3  # 1 + 2
+TIMEOUT_10 = 10
+TIMEOUT_20 = 20
+EXPECTED_HOOK_CALL_COUNT = 2
+EXPECTED_REMAINING = 0
+EXPECTED_RESET_AFTER = 1
+EXPECTED_RETRY_AFTER = 1
+
+
+@pytest.fixture
+def decorated_demo() -> Callable[[int, int], int]:
+    @Throttled(
+        key="/api/product",
+        using=RateLimiterType.FIXED_WINDOW.value,
+        quota=rate_limiter.per_min(1),
+        store=store.MemoryStore(),
+    )
+    def demo(left: int, right: int) -> int:
+        return left + right
+
+    return cast("Callable[[int, int], int]", demo)
+
+
+class TestThrottled:
+    @classmethod
+    def test_demo(cls, decorated_demo: Callable[[int, int], int]) -> None:
+        assert decorated_demo(1, 2) == EXPECTED_SUM
+        with pytest.raises(LimitedError):
+            decorated_demo(2, 3)
+
+    @classmethod
+    @pytest.mark.parametrize(
+        ("constructor_kwargs", "exc", "match"),
+        [
+            ({"timeout": -2}, DataError, "Invalid timeout"),
+            ({"timeout": "a"}, DataError, "Invalid timeout"),
+            ({"timeout": -1.1}, DataError, "Invalid timeout"),
+            ({"timeout": 0}, DataError, "Invalid timeout"),
+            ({"timeout": 0.0}, DataError, "Invalid timeout"),
+            ({"timeout": -0.0}, DataError, "Invalid timeout"),
+        ],
+    )
+    def test_constructor__raise(
+        cls,
+        constructor_kwargs: dict[str, Any],
+        exc: type[BaseThrottledError],
+        match: str,
+    ) -> None:
+        with pytest.raises(exc, match=match):
+            Throttled(**constructor_kwargs)
+
+    @classmethod
+    def test_get_key(cls) -> None:
+        throttle: Throttled = Throttled(key="key")
+        assert throttle._get_key() == "key"
+        assert throttle._get_key(key="override_key") == "override_key"
+        assert throttle._get_key(key="") == "key"
+        assert throttle._get_key(key=None) == "key"
+
+        for _throttle in [Throttled(), Throttled(key=""), Throttled(key=None)]:
+            with pytest.raises(DataError, match="Invalid key"):
+                _throttle(lambda _: None)
+
+            with pytest.raises(DataError, match="Invalid key"):
+                _throttle._get_key()
+
+            with pytest.raises(DataError, match="Invalid key"):
+                _throttle._get_key(key="")
+
+            assert _throttle._get_key(key="override_key") == "override_key"
+
+    @classmethod
+    def test_get_timeout(cls) -> None:
+        throttle: Throttled = Throttled(timeout=TIMEOUT_10)
+        assert throttle._get_timeout() == TIMEOUT_10
+        assert throttle._get_timeout(timeout=TIMEOUT_20) == TIMEOUT_20
+        assert throttle._get_timeout(timeout=-1) == -1
+
+        with pytest.raises(DataError, match="Invalid timeout"):
+            throttle._get_timeout(timeout=0)
+
+        with pytest.raises(DataError, match="Invalid timeout"):
+            throttle._get_timeout(timeout=-2)
+
+    @classmethod
+    def test_limit__timeout(cls) -> None:
+        throttle: Throttled = Throttled(timeout=1, quota=per_sec(1))
+        assert not throttle.limit("key").limited
+
+        def _callback(
+            left: float, right: float, elapsed: TimeLikeValueT, *args: Any, **kwargs: Any
+        ) -> None:
+            assert left <= elapsed < right
+
+        with Timer(callback=partial(_callback, 1, 2)):
+            assert not throttle.limit("key").limited
+
+        # case: retry_after > timeout
+        with Timer(callback=partial(_callback, 0, 0.1)):
+            assert throttle.limit("key", cost=2).limited
+
+        # case: timeout < retry_after
+        with Timer(callback=partial(_callback, 0, 0.1)):
+            assert throttle.limit("key", timeout=0.5).limited
+
+    @classmethod
+    def test_enter(cls) -> None:
+        mem_store: store.MemoryStore = store.MemoryStore()
+        construct_kwargs: dict[str, Any] = {
+            "key": "key",
+            "quota": per_sec(1),
+            "store": mem_store,
+        }
+        throttle: Throttled = Throttled(**construct_kwargs)
+        with throttle as rate_limit_result:
+            assert not rate_limit_result.limited
+
+        with pytest.raises(LimitedError) as exc_info, throttle:
+            pass
+        raised_result = exc_info.value.rate_limit_result
+        assert raised_result is not None
+        assert raised_result.limited
+        assert raised_result.state.remaining == EXPECTED_REMAINING
+        assert raised_result.state.reset_after == EXPECTED_RESET_AFTER
+        assert raised_result.state.retry_after == EXPECTED_RETRY_AFTER
+
+        with Throttled(**construct_kwargs, timeout=1) as rate_limit_result:
+            assert not rate_limit_result.limited
+
+    @classmethod
+    def test_constructor__string_quota_keep_backward_compatible(cls) -> None:
+        mem_store: store.MemoryStore = store.MemoryStore()
+
+        # New DSL path.
+        throttle_with_str: Throttled = Throttled(
+            key="quota-str",
+            quota="1/s burst 2",
+            store=mem_store,
+        )
+        assert not throttle_with_str.limit().limited
+
+        # Existing Quota path stays compatible.
+        throttle_with_quota: Throttled = Throttled(
+            key="quota-object",
+            quota=per_sec(1),
+            store=mem_store,
+        )
+        assert not throttle_with_quota.limit().limited
+
+    @classmethod
+    def test_constructor__reject_multi_rules_string(cls) -> None:
+        with pytest.raises(DataError, match="multiple quota rules"):
+            Throttled(
+                key="quota-multi",
+                quota="1/s burst 2; 10/m",
+                store=store.MemoryStore(),
+            )
+
+    @classmethod
+    def test_hook__execution_order(cls) -> None:
+        """Throttled should execute hooks in correct middleware order.
+
+        hooks=[A, B] should execute: A_before → B_before → limit → B_after → A_after
+        """
+        order: list[str] = []
+
+        class OrderHook(Hook):
+            def __init__(self, name: str) -> None:
+                self.name = name
+
+            def on_limit(self, *args: object, **kwargs: object) -> RateLimitResult:
+                call_next = cast("Callable[[], RateLimitResult]", args[0])
+                order.append(f"{self.name}_before")
+                result: RateLimitResult = call_next()
+                order.append(f"{self.name}_after")
+                return result
+
+        throttle: Throttled = Throttled(
+            key="test",
+            quota=per_sec(10),
+            hooks=[OrderHook("A"), OrderHook("B")],
+        )
+
+        throttle.limit()
+
+        assert order == ["A_before", "B_before", "B_after", "A_after"]
+
+    @classmethod
+    def test_hook__called_once_per_limit_even_with_retry(cls) -> None:
+        """Hook should be called once per limit() call, not per retry attempt.
+
+        This test ensures that when timeout/retry is enabled, the hook wraps
+        the entire limit() operation (including retries), not each individual
+        retry attempt.
+        """
+        call_count: int = 0
+
+        class CountingHook(Hook):
+            def on_limit(self, *args: object, **kwargs: object) -> RateLimitResult:
+                nonlocal call_count
+                call_count += 1
+                call_next = cast("Callable[[], RateLimitResult]", args[0])
+                return call_next()
+
+        throttle: Throttled = Throttled(
+            key="test",
+            quota=per_sec(1),
+            timeout=2,  # Enable retry
+            hooks=[CountingHook()],
+        )
+
+        # First call: allowed immediately
+        throttle.limit()
+        # Second call: denied initially, then retries and succeeds after ~1s
+        throttle.limit()
+
+        # Hook should be called exactly 2 times (once per limit() call)
+        # NOT more times due to internal retry attempts
+        assert call_count == EXPECTED_HOOK_CALL_COUNT
+
+
+class TestKeyPrefix:
+    @classmethod
+    def test_limit__default_key_prefix(cls) -> None:
+        """Keys are stored under ``throttled:v1:<rate limiter type>:`` by default."""
+        mem_store: store.MemoryStore = store.MemoryStore()
+        throttle: Throttled = Throttled(
+            key="key",
+            using=RateLimiterType.GCRA.value,
+            quota=per_sec(1),
+            store=mem_store,
+        )
+        throttle.limit()
+        assert mem_store.exists("throttled:v1:gcra:key")
+
+    @classmethod
+    def test_limit__custom_key_prefix(cls) -> None:
+        """A provided key_prefix replaces the default throttled: namespace."""
+        mem_store: store.MemoryStore = store.MemoryStore()
+        throttle: Throttled = Throttled(
+            key="key",
+            using=RateLimiterType.GCRA.value,
+            quota=per_sec(1),
+            store=mem_store,
+            key_prefix="my-app:rate-limit",
+        )
+        throttle.limit()
+        assert mem_store.exists("my-app:rate-limit:v1:gcra:key")
+        assert not mem_store.exists("throttled:v1:gcra:key")
+
+    @classmethod
+    def test_peek__custom_key_prefix(cls) -> None:
+        """peek reads the key that limit wrote; a mismatch would look fresh."""
+        throttle: Throttled = Throttled(
+            key="key",
+            using=RateLimiterType.GCRA.value,
+            quota=per_sec(1),
+            store=store.MemoryStore(),
+            key_prefix="my-app:rate-limit",
+        )
+        throttle.limit()
+        assert throttle.peek("key").remaining == 0
+
+    @classmethod
+    @pytest.mark.parametrize("key_prefix", ["", "  ", ":", ":my-app", "my-app:"])
+    def test_constructor__invalid_key_prefix(cls, key_prefix: str) -> None:
+        """A blank or colon-edged namespace would produce malformed storage keys."""
+        with pytest.raises(DataError, match="Invalid key_prefix"):
+            Throttled(key_prefix=key_prefix)
+
+    @classmethod
+    def test_limit__subclass_key_prefix_override(cls) -> None:
+        """A subclass overriding the legacy ``KEY_PREFIX`` keeps its keys."""
+
+        class _OverridingRateLimiter(rate_limiter.GCRARateLimiter):
+            KEY_PREFIX = "acme:v1:"
+
+            class Meta:
+                type: str = "gcra_prefix_override"
+
+        mem_store: store.MemoryStore = store.MemoryStore()
+        throttle: Throttled = Throttled(
+            key="key",
+            using="gcra_prefix_override",
+            quota=per_sec(1),
+            store=mem_store,
+        )
+        throttle.limit()
+        assert mem_store.exists("acme:v1:gcra_prefix_override:key")
+
+    @classmethod
+    def test_limit__legacy_constructor_signature(cls) -> None:
+        """A registered limiter predating key_prefix is still constructible."""
+
+        class _LegacyRateLimiter(rate_limiter.GCRARateLimiter):
+            class Meta:
+                type: str = "gcra_legacy_init"
+
+            def __init__(
+                self, quota: rate_limiter.Quota, store: store.BaseStore
+            ) -> None:
+                super().__init__(quota, store)
+
+        throttle: Throttled = Throttled(
+            key="key",
+            using="gcra_legacy_init",
+            quota=per_sec(1),
+            store=store.MemoryStore(),
+        )
+        assert throttle.limit().limited is False
+
+    @classmethod
+    def test_construct_rate_limiter_directly__invalid_key_prefix(cls) -> None:
+        """Validation also covers limiters built without going via Throttled."""
+        with pytest.raises(DataError, match="Invalid key_prefix"):
+            rate_limiter.GCRARateLimiter(
+                per_sec(1), store.MemoryStore(), key_prefix="  "
+            )

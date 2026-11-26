@@ -1,0 +1,5 @@
+# Store the vendored source with the same line endings as the pinned upstream Git blobs.
+backend/upstream_baseline/LICENSE text eol=lf
+backend/upstream_baseline/pyproject.toml text eol=lf
+backend/upstream_baseline/throttled/** text eol=lf
+backend/upstream_baseline/tests/** text eol=lf

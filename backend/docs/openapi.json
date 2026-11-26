@@ -1,0 +1,2211 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LLM Quota Throttle Gateway",
+    "description": "Deterministic dual RPM+TPM quota control plane, Reserve -> Settle/Refund ledger, Weighted DRR fairness scheduler, and circuit-breaker failover built on throttled-py.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta": {
+      "get": {
+        "summary": "Meta",
+        "operationId": "meta_api_v1_meta_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios": {
+      "get": {
+        "summary": "Scenarios",
+        "operationId": "scenarios_api_v1_scenarios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenariosListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/compare": {
+      "post": {
+        "summary": "Compare Workload",
+        "operationId": "compare_workload_api_v1_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompareResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reservations": {
+      "post": {
+        "summary": "Create Reservation",
+        "operationId": "create_reservation_api_v1_reservations_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReserveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationRecord"
+                }
+              }
+            },
+            "headers": {
+              "X-RateLimit-Remaining-RPM": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "X-RateLimit-Remaining-TPM": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        }
+      },
+      "get": {
+        "summary": "List Reservations",
+        "operationId": "list_reservations_api_v1_reservations_get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9_.-]+$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "reserved",
+                    "settled",
+                    "refunded"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationsListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/v1/reservations/{reservation_id}/settle": {
+      "post": {
+        "summary": "Settle Reservation",
+        "operationId": "settle_reservation_api_v1_reservations__reservation_id__settle_post",
+        "parameters": [
+          {
+            "name": "reservation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9_.-]+$",
+              "title": "Reservation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationRecord"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        }
+      }
+    },
+    "/api/v1/fairness/simulate": {
+      "post": {
+        "summary": "Simulate Fairness",
+        "operationId": "simulate_fairness_api_v1_fairness_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FairnessSimRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FairnessSimResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/traces/{run_id}": {
+      "get": {
+        "summary": "Get Trace",
+        "operationId": "get_trace_api_v1_traces__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9_.-]+$",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/v1/traces/{run_id}/stream": {
+      "get": {
+        "summary": "Stream Trace",
+        "operationId": "stream_trace_api_v1_traces__run_id__stream_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9_.-]+$",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/v1/eval/redaction": {
+      "post": {
+        "summary": "Eval Redaction",
+        "operationId": "eval_redaction_api_v1_eval_redaction_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedactionEvalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedactionEvalResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/benchmarks": {
+      "get": {
+        "summary": "Benchmarks",
+        "operationId": "benchmarks_api_v1_benchmarks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarksResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BenchmarksResponse": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available"
+        ],
+        "title": "BenchmarksResponse",
+        "description": "Sealed benchmark results payload."
+      },
+      "CompareRequest": {
+        "properties": {
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id",
+            "default": "phantom-quota-burn"
+          },
+          "requests": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkloadEventInput"
+                },
+                "type": "array",
+                "maxItems": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requests"
+          },
+          "rpm_limit": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Rpm Limit",
+            "default": 10
+          },
+          "tpm_limit": {
+            "type": "integer",
+            "maximum": 100000000.0,
+            "minimum": 1.0,
+            "title": "Tpm Limit",
+            "default": 24000
+          },
+          "window_seconds": {
+            "type": "integer",
+            "maximum": 3600.0,
+            "minimum": 1.0,
+            "title": "Window Seconds",
+            "default": 60
+          },
+          "usd_budget_limit": {
+            "type": "number",
+            "maximum": 100000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Usd Budget Limit",
+            "default": 25.0
+          },
+          "fail_fast_oversized": {
+            "type": "boolean",
+            "title": "Fail Fast Oversized",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "CompareRequest",
+        "description": "Dual baseline-vs-enhanced workload comparison request."
+      },
+      "CompareResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "scenario_id": {
+            "type": "string",
+            "title": "Scenario Id"
+          },
+          "total_events": {
+            "type": "integer",
+            "title": "Total Events"
+          },
+          "trace_id": {
+            "type": "string",
+            "title": "Trace Id"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/EngineMetrics"
+          },
+          "enhanced": {
+            "$ref": "#/components/schemas/EngineMetrics"
+          },
+          "delta": {
+            "$ref": "#/components/schemas/ComparisonDelta"
+          },
+          "events_preview": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionEventRecord"
+            },
+            "type": "array",
+            "title": "Events Preview"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "scenario_id",
+          "total_events",
+          "trace_id",
+          "baseline",
+          "enhanced",
+          "delta",
+          "events_preview"
+        ],
+        "title": "CompareResponse",
+        "description": "Dual comparison output."
+      },
+      "ComparisonDelta": {
+        "properties": {
+          "phantom_burn_prevented": {
+            "type": "integer",
+            "title": "Phantom Burn Prevented"
+          },
+          "tpm_reclaimed": {
+            "type": "integer",
+            "title": "Tpm Reclaimed"
+          },
+          "fairness_gain": {
+            "type": "number",
+            "title": "Fairness Gain"
+          },
+          "oversized_spins_avoided": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oversized Spins Avoided"
+          },
+          "evictions_prevented": {
+            "type": "integer",
+            "title": "Evictions Prevented"
+          }
+        },
+        "type": "object",
+        "required": [
+          "phantom_burn_prevented",
+          "tpm_reclaimed",
+          "fairness_gain",
+          "oversized_spins_avoided",
+          "evictions_prevented"
+        ],
+        "title": "ComparisonDelta",
+        "description": "Quantified improvements of enhanced engine over upstream baseline."
+      },
+      "DecisionEventRecord": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "reserved_tokens": {
+            "type": "integer",
+            "title": "Reserved Tokens"
+          },
+          "actual_tokens": {
+            "type": "integer",
+            "title": "Actual Tokens"
+          },
+          "refunded_tokens": {
+            "type": "integer",
+            "title": "Refunded Tokens"
+          },
+          "enhanced_allowed": {
+            "type": "boolean",
+            "title": "Enhanced Allowed"
+          },
+          "enhanced_reason": {
+            "type": "string",
+            "title": "Enhanced Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "tenant_id",
+          "model",
+          "reserved_tokens",
+          "actual_tokens",
+          "refunded_tokens",
+          "enhanced_allowed",
+          "enhanced_reason"
+        ],
+        "title": "DecisionEventRecord",
+        "description": "Per-event comparison decision preview row."
+      },
+      "EngineMetrics": {
+        "properties": {
+          "admitted": {
+            "type": "integer",
+            "title": "Admitted"
+          },
+          "rejected": {
+            "type": "integer",
+            "title": "Rejected"
+          },
+          "errors": {
+            "type": "integer",
+            "title": "Errors"
+          },
+          "upstream_supported": {
+            "type": "boolean",
+            "title": "Upstream Supported"
+          },
+          "upstream_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Error"
+          },
+          "phantom_burn_units": {
+            "type": "integer",
+            "title": "Phantom Burn Units"
+          },
+          "oversized_waits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oversized Waits"
+          },
+          "evicted_active_keys": {
+            "type": "integer",
+            "title": "Evicted Active Keys"
+          },
+          "wasted_tpm_reserved": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wasted Tpm Reserved"
+          },
+          "actual_tpm_settled": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Tpm Settled"
+          },
+          "total_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Cost Usd"
+          },
+          "jains_fairness": {
+            "type": "number",
+            "title": "Jains Fairness"
+          },
+          "p99_decision_ms": {
+            "type": "number",
+            "title": "P99 Decision Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "admitted",
+          "rejected",
+          "errors",
+          "upstream_supported",
+          "upstream_error",
+          "phantom_burn_units",
+          "oversized_waits",
+          "evicted_active_keys",
+          "wasted_tpm_reserved",
+          "actual_tpm_settled",
+          "total_cost_usd",
+          "jains_fairness",
+          "p99_decision_ms"
+        ],
+        "title": "EngineMetrics",
+        "description": "Per-engine evaluation metrics (No-False-Greens compatible)."
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "error_code": {
+            "type": "string",
+            "title": "Error Code"
+          },
+          "retry_after_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "error_code"
+        ],
+        "title": "ErrorResponse",
+        "description": "Standardized API error payload."
+      },
+      "FailoverEventRecord": {
+        "properties": {
+          "round_index": {
+            "type": "integer",
+            "title": "Round Index"
+          },
+          "from_provider": {
+            "type": "string",
+            "title": "From Provider"
+          },
+          "to_provider": {
+            "type": "string",
+            "title": "To Provider"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "backoff_seconds": {
+            "type": "number",
+            "title": "Backoff Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "round_index",
+          "from_provider",
+          "to_provider",
+          "reason",
+          "backoff_seconds"
+        ],
+        "title": "FailoverEventRecord",
+        "description": "Failover transition record."
+      },
+      "FairnessSimRequest": {
+        "properties": {
+          "tenants": {
+            "items": {
+              "$ref": "#/components/schemas/TenantWeightSpec"
+            },
+            "type": "array",
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Tenants"
+          },
+          "total_tpm_capacity": {
+            "type": "integer",
+            "maximum": 10000000.0,
+            "minimum": 1000.0,
+            "title": "Total Tpm Capacity",
+            "default": 20000
+          },
+          "quantum_tokens": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 100.0,
+            "title": "Quantum Tokens",
+            "default": 1000
+          },
+          "rounds": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Rounds",
+            "default": 12
+          },
+          "inject_provider_429": {
+            "type": "boolean",
+            "title": "Inject Provider 429",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenants"
+        ],
+        "title": "FairnessSimRequest",
+        "description": "Weighted DRR & failover simulation payload."
+      },
+      "FairnessSimResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "trace_id": {
+            "type": "string",
+            "title": "Trace Id"
+          },
+          "jains_fairness_baseline_fifo": {
+            "type": "number",
+            "title": "Jains Fairness Baseline Fifo"
+          },
+          "jains_fairness_drr": {
+            "type": "number",
+            "title": "Jains Fairness Drr"
+          },
+          "starvation_events_fifo": {
+            "type": "integer",
+            "title": "Starvation Events Fifo"
+          },
+          "starvation_events_drr": {
+            "type": "integer",
+            "title": "Starvation Events Drr"
+          },
+          "tenant_outcomes": {
+            "items": {
+              "$ref": "#/components/schemas/TenantFairnessOutcome"
+            },
+            "type": "array",
+            "title": "Tenant Outcomes"
+          },
+          "provider_health": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderHealthSnapshot"
+            },
+            "type": "array",
+            "title": "Provider Health"
+          },
+          "failover_events": {
+            "items": {
+              "$ref": "#/components/schemas/FailoverEventRecord"
+            },
+            "type": "array",
+            "title": "Failover Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "trace_id",
+          "jains_fairness_baseline_fifo",
+          "jains_fairness_drr",
+          "starvation_events_fifo",
+          "starvation_events_drr",
+          "tenant_outcomes",
+          "provider_health",
+          "failover_events"
+        ],
+        "title": "FairnessSimResponse",
+        "description": "Weighted DRR fairness & failover simulation output."
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "upstream_baseline_version": {
+            "type": "string",
+            "title": "Upstream Baseline Version"
+          },
+          "upstream_commit_sha": {
+            "type": "string",
+            "title": "Upstream Commit Sha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "upstream_baseline_version",
+          "upstream_commit_sha"
+        ],
+        "title": "HealthResponse",
+        "description": "Health check response."
+      },
+      "MetaResponse": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "upstream_repo": {
+            "type": "string",
+            "title": "Upstream Repo"
+          },
+          "upstream_version": {
+            "type": "string",
+            "title": "Upstream Version"
+          },
+          "upstream_commit_sha": {
+            "type": "string",
+            "title": "Upstream Commit Sha"
+          },
+          "storage_backend": {
+            "type": "string",
+            "title": "Storage Backend"
+          },
+          "store_max_keys": {
+            "type": "integer",
+            "title": "Store Max Keys"
+          },
+          "redaction_mode": {
+            "type": "string",
+            "title": "Redaction Mode"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelPricingInfo"
+            },
+            "type": "array",
+            "title": "Models"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "version",
+          "upstream_repo",
+          "upstream_version",
+          "upstream_commit_sha",
+          "storage_backend",
+          "store_max_keys",
+          "redaction_mode",
+          "models"
+        ],
+        "title": "MetaResponse",
+        "description": "Gateway metadata and active configuration response."
+      },
+      "ModelPricingInfo": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "prompt_usd_per_1k": {
+            "type": "number",
+            "title": "Prompt Usd Per 1K"
+          },
+          "completion_usd_per_1k": {
+            "type": "number",
+            "title": "Completion Usd Per 1K"
+          },
+          "primary_provider": {
+            "type": "string",
+            "title": "Primary Provider"
+          },
+          "fallback_provider": {
+            "type": "string",
+            "title": "Fallback Provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "prompt_usd_per_1k",
+          "completion_usd_per_1k",
+          "primary_provider",
+          "fallback_provider"
+        ],
+        "title": "ModelPricingInfo",
+        "description": "Supported LLM model pricing and routing entry."
+      },
+      "ProviderHealthSnapshot": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "consecutive_failures": {
+            "type": "integer",
+            "title": "Consecutive Failures"
+          },
+          "cooldown_rounds": {
+            "type": "integer",
+            "title": "Cooldown Rounds"
+          },
+          "total_429_5xx": {
+            "type": "integer",
+            "title": "Total 429 5Xx"
+          },
+          "routed_requests": {
+            "type": "integer",
+            "title": "Routed Requests"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "role",
+          "state",
+          "consecutive_failures",
+          "cooldown_rounds",
+          "total_429_5xx",
+          "routed_requests"
+        ],
+        "title": "ProviderHealthSnapshot",
+        "description": "Provider circuit-breaker health snapshot."
+      },
+      "RedactionEvalRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "mask",
+              "block",
+              "audit"
+            ],
+            "title": "Mode",
+            "default": "mask"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "RedactionEvalRequest",
+        "description": "Prompt redaction evaluation request."
+      },
+      "RedactionEvalResponse": {
+        "properties": {
+          "allowed": {
+            "type": "boolean",
+            "title": "Allowed"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "redacted_text": {
+            "type": "string",
+            "title": "Redacted Text"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/RedactionFinding"
+            },
+            "type": "array",
+            "title": "Findings"
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "allowed",
+          "mode",
+          "redacted_text",
+          "findings",
+          "latency_ms"
+        ],
+        "title": "RedactionEvalResponse",
+        "description": "Prompt redaction evaluation output."
+      },
+      "RedactionFinding": {
+        "properties": {
+          "rule": {
+            "type": "string",
+            "title": "Rule"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "sample_masked": {
+            "type": "string",
+            "title": "Sample Masked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule",
+          "count",
+          "sample_masked"
+        ],
+        "title": "RedactionFinding",
+        "description": "Aggregated match count per rule."
+      },
+      "ReservationRecord": {
+        "properties": {
+          "reservation_id": {
+            "type": "string",
+            "title": "Reservation Id"
+          },
+          "trace_id": {
+            "type": "string",
+            "title": "Trace Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reserved_tokens": {
+            "type": "integer",
+            "title": "Reserved Tokens"
+          },
+          "actual_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Tokens"
+          },
+          "refunded_tokens": {
+            "type": "integer",
+            "title": "Refunded Tokens"
+          },
+          "estimated_cost_usd": {
+            "type": "number",
+            "title": "Estimated Cost Usd"
+          },
+          "actual_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Cost Usd"
+          },
+          "remaining_rpm": {
+            "type": "integer",
+            "title": "Remaining Rpm"
+          },
+          "remaining_tpm": {
+            "type": "integer",
+            "title": "Remaining Tpm"
+          },
+          "provider_used": {
+            "type": "string",
+            "title": "Provider Used"
+          },
+          "redaction_hits": {
+            "type": "integer",
+            "title": "Redaction Hits"
+          },
+          "created_at_ms": {
+            "type": "integer",
+            "title": "Created At Ms"
+          },
+          "settled_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled At Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reservation_id",
+          "trace_id",
+          "tenant_id",
+          "model",
+          "status",
+          "reserved_tokens",
+          "actual_tokens",
+          "refunded_tokens",
+          "estimated_cost_usd",
+          "actual_cost_usd",
+          "remaining_rpm",
+          "remaining_tpm",
+          "provider_used",
+          "redaction_hits",
+          "created_at_ms",
+          "settled_at_ms"
+        ],
+        "title": "ReservationRecord",
+        "description": "Persisted reservation ledger item."
+      },
+      "ReservationsListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReservationRecord"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ReservationsListResponse",
+        "description": "Paginated reservation list wrapper."
+      },
+      "ReserveRequest": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Tenant Id"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "claude-3-5-sonnet",
+                  "llama-3-70b"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "estimated_prompt_tokens": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Estimated Prompt Tokens"
+          },
+          "max_completion_tokens": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Max Completion Tokens"
+          },
+          "priority": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Priority",
+            "default": 1
+          },
+          "payload_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 65536
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload Text"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "estimated_prompt_tokens",
+          "max_completion_tokens"
+        ],
+        "title": "ReserveRequest",
+        "description": "Create a quota reservation prior to upstream LLM streaming/completion."
+      },
+      "ScenarioSummary": {
+        "properties": {
+          "scenario_id": {
+            "type": "string",
+            "title": "Scenario Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "default_rpm_limit": {
+            "type": "integer",
+            "title": "Default Rpm Limit"
+          },
+          "default_tpm_limit": {
+            "type": "integer",
+            "title": "Default Tpm Limit"
+          },
+          "default_window_seconds": {
+            "type": "integer",
+            "title": "Default Window Seconds"
+          },
+          "event_count": {
+            "type": "integer",
+            "title": "Event Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scenario_id",
+          "title",
+          "description",
+          "default_rpm_limit",
+          "default_tpm_limit",
+          "default_window_seconds",
+          "event_count"
+        ],
+        "title": "ScenarioSummary",
+        "description": "Summary metadata for a built-in reproducible stress scenario."
+      },
+      "ScenariosListResponse": {
+        "properties": {
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioSummary"
+            },
+            "type": "array",
+            "title": "Scenarios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scenarios"
+        ],
+        "title": "ScenariosListResponse",
+        "description": "Scenario list wrapper."
+      },
+      "SettleRequest": {
+        "properties": {
+          "actual_prompt_tokens": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Actual Prompt Tokens"
+          },
+          "actual_completion_tokens": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Actual Completion Tokens"
+          },
+          "provider_status": {
+            "type": "integer",
+            "maximum": 599.0,
+            "minimum": 100.0,
+            "title": "Provider Status",
+            "default": 200
+          }
+        },
+        "type": "object",
+        "required": [
+          "actual_prompt_tokens",
+          "actual_completion_tokens"
+        ],
+        "title": "SettleRequest",
+        "description": "Settle an active reservation with observed usage tokens."
+      },
+      "TenantFairnessOutcome": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "weight": {
+            "type": "integer",
+            "title": "Weight"
+          },
+          "requested_tokens": {
+            "type": "integer",
+            "title": "Requested Tokens"
+          },
+          "fifo_served_tokens": {
+            "type": "integer",
+            "title": "Fifo Served Tokens"
+          },
+          "drr_served_tokens": {
+            "type": "integer",
+            "title": "Drr Served Tokens"
+          },
+          "fifo_requests_served": {
+            "type": "integer",
+            "title": "Fifo Requests Served"
+          },
+          "drr_requests_served": {
+            "type": "integer",
+            "title": "Drr Requests Served"
+          },
+          "fulfillment_ratio_fifo": {
+            "type": "number",
+            "title": "Fulfillment Ratio Fifo"
+          },
+          "fulfillment_ratio_drr": {
+            "type": "number",
+            "title": "Fulfillment Ratio Drr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "weight",
+          "requested_tokens",
+          "fifo_served_tokens",
+          "drr_served_tokens",
+          "fifo_requests_served",
+          "drr_requests_served",
+          "fulfillment_ratio_fifo",
+          "fulfillment_ratio_drr"
+        ],
+        "title": "TenantFairnessOutcome",
+        "description": "Per-tenant FIFO vs Weighted DRR outcome."
+      },
+      "TenantWeightSpec": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Tenant Id"
+          },
+          "weight": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Weight"
+          },
+          "demand_rpm": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Demand Rpm"
+          },
+          "avg_tokens": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 10.0,
+            "title": "Avg Tokens"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "weight",
+          "demand_rpm",
+          "avg_tokens"
+        ],
+        "title": "TenantWeightSpec",
+        "description": "Tenant scheduling specification for DRR vs FIFO simulator."
+      },
+      "TraceResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "trace_id": {
+            "type": "string",
+            "title": "Trace Id"
+          },
+          "resourceSpans": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Resourcespans"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "trace_id",
+          "resourceSpans"
+        ],
+        "title": "TraceResponse"
+      },
+      "ValidationErrorResponse": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationIssue"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ValidationErrorResponse"
+      },
+      "ValidationIssue": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Loc"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Msg"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationIssue"
+      },
+      "WorkloadEventInput": {
+        "properties": {
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Tenant Id"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "claude-3-5-sonnet",
+                  "llama-3-70b"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "prompt_tokens": {
+            "type": "integer",
+            "maximum": 2000000.0,
+            "minimum": 0.0,
+            "title": "Prompt Tokens"
+          },
+          "max_completion_tokens": {
+            "type": "integer",
+            "maximum": 2000000.0,
+            "minimum": 0.0,
+            "title": "Max Completion Tokens"
+          },
+          "actual_completion_tokens": {
+            "type": "integer",
+            "maximum": 2000000.0,
+            "minimum": 0.0,
+            "title": "Actual Completion Tokens"
+          },
+          "priority": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Priority",
+            "default": 1
+          },
+          "provider_status": {
+            "type": "integer",
+            "maximum": 599.0,
+            "minimum": 100.0,
+            "title": "Provider Status",
+            "default": 200
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "prompt_tokens",
+          "max_completion_tokens",
+          "actual_completion_tokens"
+        ],
+        "title": "WorkloadEventInput",
+        "description": "Single workload event for ad-hoc comparison."
+      }
+    }
+  }
+}

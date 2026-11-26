@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llm-quota-throttle-gateway"
+version = "0.1.0"
+description = "Deterministic LLM Gateway Dual RPM+TPM Quota, Reserve-Settle Ledger, Weighted DRR Fair Scheduling, and Provider Failover Control Plane built on ZhuoZhuoCrayon/throttled-py"
+license = "MIT AND BSD-3-Clause"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0,<1.0.0",
+    "uvicorn>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.1",
+    "fakeredis[lua]>=2.20.0",
+    "ruff>=0.8.0",
+    "mypy>=1.15.0",
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+    "/llm_gateway/",
+    "/upstream_baseline/throttled/",
+    "/upstream_baseline/LICENSE",
+    "/upstream_baseline/UPSTREAM_META.json",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+mypy_path = ["backend", "."]
+packages = ["llm_gateway"]
+
+[[tool.mypy.overrides]]
+module = ["upstream_baseline", "upstream_baseline.*"]
+follow_imports = "skip"

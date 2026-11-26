@@ -1,0 +1,65 @@
+import os
+from collections.abc import Generator
+from typing import Any, cast
+
+import pytest
+from fakeredis import FakeConnection
+from throttled import BaseStore, MemoryStore, RedisStore, ValkeyStore
+from throttled.constants import StoreType
+from throttled.utils import Benchmark
+
+
+def _create_store(store_type: str) -> BaseStore:
+    """Create a store based on the given store type."""
+    if store_type == StoreType.MEMORY.value:
+        return MemoryStore()
+    store_cls: type[RedisStore] = ValkeyStore if store_type == "valkey" else RedisStore
+    if store_type == "valkey" and (server := os.environ.get("VALKEY_URL")):
+        return ValkeyStore(server=server)
+    return store_cls(
+        options={
+            "REDIS_CLIENT_CLASS": "fakeredis.FakeRedis",
+            "CONNECTION_POOL_KWARGS": {"connection_class": FakeConnection},
+        }
+    )
+
+
+def _clear_store(store: BaseStore) -> None:
+    """Clear the contents of the given store."""
+    if StoreType.REDIS.value == store.TYPE:
+        cast("RedisStore", store)._backend.get_client().flushall()
+
+
+def _store(store_type: str) -> Generator[BaseStore, Any, None]:
+    """Fixture for creating a store of the specified type."""
+    store: BaseStore = _create_store(store_type)
+    try:
+        yield store
+    finally:
+        _clear_store(store)
+
+
+@pytest.fixture
+def redis_store() -> Generator[RedisStore, Any, None]:
+    """Fixture for creating a Redis store."""
+    for store in _store(StoreType.REDIS.value):
+        # ``_store`` yields the union type but this fixture is hardcoded to
+        # REDIS, so narrow to ``RedisStore`` for consumers that need it.
+        yield cast("RedisStore", store)
+
+
+@pytest.fixture(
+    params=[
+        StoreType.MEMORY.value,
+        StoreType.REDIS.value,
+        pytest.param("valkey", marks=pytest.mark.valkey),
+    ]
+)
+def store(request) -> Generator[BaseStore, Any, None]:
+    """Fixture for creating different types of stores."""
+    yield from _store(request.param)
+
+
+@pytest.fixture(scope="class")
+def benchmark() -> Benchmark:
+    return Benchmark()

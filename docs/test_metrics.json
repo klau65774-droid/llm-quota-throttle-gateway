@@ -1,0 +1,139 @@
+{
+  "schema_version": "2.0.0",
+  "status": "passed",
+  "overall_pass": true,
+  "input_errors": {},
+  "trace_replay": {
+    "clock": "source timestamps at original speed",
+    "window_seconds": 60,
+    "completion_reserve_cap_tokens": 2048
+  },
+  "tier_1a_azure_traces": {
+    "datasets": [
+      "AzureLLMInferenceTrace_code.csv",
+      "AzureLLMInferenceTrace_conv.csv"
+    ],
+    "input_provenance": {
+      "AzureLLMInferenceTrace_code.csv": {
+        "git_blob": "62bd8109d0f2b1bc48206d397ecca48d8de03aab",
+        "sha256": "54e9a6d2a4bd06ba1e060304b900abbc74cbea53de96506e60fe5bb4f2277fb6",
+        "size_bytes": 320117
+      },
+      "AzureLLMInferenceTrace_conv.csv": {
+        "git_blob": "5b9219f2caf93bbbf95ec29894e206115658e235",
+        "sha256": "2f1e5b666d4e3055fdbba98598ce2ec307767b9064e03e2fa46676dbcc7d0bf8",
+        "size_bytes": 719188
+      }
+    },
+    "dataset_rows": {
+      "AzureLLMInferenceTrace_code.csv": 8819,
+      "AzureLLMInferenceTrace_conv.csv": 19366
+    },
+    "total_requests": 28185,
+    "admitted": 28185,
+    "rejected": 0,
+    "oversized_rejected": 0,
+    "tpm_reserved_total": 98144724,
+    "tpm_actual_settled_total": 44756405,
+    "tpm_refunded_reclaimed": 53388319,
+    "tpm_overrun_charged": 0,
+    "reclamation_ratio_pct": 54.4,
+    "throughput_req_per_sec": 72464.9,
+    "p50_decision_ms": 0.012,
+    "p99_decision_ms": 0.0261,
+    "duration_trace_seconds": 3513.247426,
+    "accounting_consistent": true,
+    "rpm_rollback_failures": 0,
+    "tpm_settlement_adjustment_failures": 0
+  },
+  "tier_1b_burstgpt_50k": {
+    "dataset": "BurstGPT_1.csv",
+    "input_provenance": {
+      "BurstGPT_1.csv": {
+        "git_blob": "f95dd2c84454b067fdd0973858c55ecfe31bdad7",
+        "sha256": "46fc9480ef0b748ecb2b51d512ff08c196b031782cbe6f78e28044d768e86d5a",
+        "size_bytes": 50853373
+      }
+    },
+    "slice_events": 50000,
+    "model_distribution": {
+      "ChatGPT": 40506,
+      "GPT-4": 9494
+    },
+    "zero_response_failed_events": 1957,
+    "tokens_reclaimed_total": 95168084,
+    "admitted": 50000,
+    "rejected": 0,
+    "oversized_rejected": 0,
+    "tpm_reserved_total": 123337185,
+    "tpm_actual_settled_total": 28183853,
+    "tpm_refunded_reclaimed": 95168084,
+    "tpm_overrun_charged": 14752,
+    "reclamation_ratio_pct": 77.16,
+    "throughput_req_per_sec": 52506.9,
+    "p50_decision_ms": 0.0131,
+    "p99_decision_ms": 0.0567,
+    "duration_trace_seconds": 824187.0,
+    "accounting_consistent": true,
+    "rpm_rollback_failures": 0,
+    "tpm_settlement_adjustment_failures": 0
+  },
+  "tier_2_chaos_attacks": {
+    "enhanced_phantom_burn_count": 0,
+    "sliding_window_rejections_checked": 500,
+    "sliding_window_refund_bounded": true,
+    "cache_thrash_expired_swept": 192,
+    "cache_thrash_sweep_before_evict": true,
+    "cache_thrash_idle_evicted": 2809,
+    "cache_thrash_active_evicted": 0,
+    "cache_thrash_active_expected": 64,
+    "cache_thrash_active_retained": 64,
+    "cache_thrash_capacity_reached": true,
+    "saturated_active_store_fails_closed": true,
+    "subsecond_monotonic_refill_pass": true,
+    "oversized_fail_fast_caught": 100,
+    "oversized_100x_elapsed_ms": 0.0639,
+    "settlement_overrun_debt_observed": true,
+    "failover_events_triggered": 2,
+    "drr_jains_under_faults": 0.809266,
+    "fifo_jains_under_faults": 0.333333,
+    "primary_faults_observed": 2,
+    "backup_requests_routed": 3
+  },
+  "synthetic_fairness": {
+    "jains_fairness_fifo": 0.333333,
+    "jains_fairness_drr": 0.809266,
+    "starvation_events_fifo": 24,
+    "starvation_events_drr": 10,
+    "drr_served_all_tenants": true
+  },
+  "tier_3_redaction_dos": {
+    "secret_detection_hits": 6,
+    "secret_detection_targets": 6,
+    "benign_false_positives": 0,
+    "benign_targets": 3,
+    "standard_max_latency_ms": 0.0244,
+    "block_policy_check": true,
+    "small_high_density_chars": 15309,
+    "small_high_density_latency_ms": 1.6266,
+    "large_high_density_chars": 61398,
+    "large_high_density_latency_ms": 6.3946,
+    "latency_budget_ms": 50.0,
+    "high_density_detection_pass": true
+  },
+  "ci_regression_gate": {
+    "azure_trace_coverage_and_accounting": true,
+    "burstgpt_trace_coverage_and_accounting": true,
+    "reserve_refund_tpm_reclaimed": true,
+    "zero_phantom_quota_burn": true,
+    "sliding_window_refund_bounded": true,
+    "expired_sweep_precedes_eviction": true,
+    "eviction_shield_zero_active_drop": true,
+    "subsecond_refill_and_oversized_guard": true,
+    "settlement_overrun_debt_observed": true,
+    "drr_beats_fifo_fairness": true,
+    "provider_failover_reaches_backup": true,
+    "redaction_accuracy": true,
+    "redaction_bounded_latency": true
+  }
+}

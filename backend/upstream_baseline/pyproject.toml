@@ -1,0 +1,203 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "throttled-py"
+version = "3.5.0"
+description = "🔧 High-performance Python rate limiting library with multiple algorithms (Fixed Window, Sliding Window, Token Bucket, Leaky Bucket & GCRA) and storage backends (Redis, Valkey, In-Memory)."
+authors = [
+    {name = "ZhuoZhuoCrayon", email = "crayon.ccxx@gmail.com"},
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: PyPy"
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ZhuoZhuoCrayon/throttled-py"
+Repository = "https://github.com/ZhuoZhuoCrayon/throttled-py"
+Documentation = "https://throttled-py.readthedocs.io"
+Changes = "https://github.com/ZhuoZhuoCrayon/throttled-py/releases"
+"Bug Tracker" = "https://github.com/ZhuoZhuoCrayon/throttled-py/issues"
+
+[project.optional-dependencies]
+memory = []
+redis = ["redis>3,!=4.5.2,!=4.5.3,<8.0.0"]
+valkey = ["redis>3,!=4.5.2,!=4.5.3,<8.0.0"]
+otel = ["opentelemetry-api>=1.45.2"]
+fastapi = ["fastapi>=0.100.0,<1.0.0"]
+flask = ["flask>=2.3.3,<4.0"]
+
+[dependency-groups]
+dev = [
+    "hatchling",
+    "twine>=6.0.1",
+    "ipython>=8.0",
+    "pytest>=8.3.4",
+    "pytest-cov>=4.0",
+    "pytest-asyncio>=0.23.0",
+    "fakeredis[lua]>=2.20.0",
+    "ruff>=0.5.5",
+    "build>=1.2.1",
+    "pytest-xdist>=3.8.0",
+    "prek>=0.2.25",
+    "opentelemetry-api>=1.45.2",
+    "opentelemetry-sdk>=1.30.0",
+    "mypy>=1.15",
+    "httpx>=0.28.1",
+    "fastapi>=0.100.0,<1.0.0",
+    "flask[async]>=2.3.3,<4.0",
+]
+docs = [
+    "sphinx",
+    "sphinx-book-theme",
+    "soupsieve>=4.0",
+    "sphinx_thebe",
+    "sphinx-copybutton",
+    "sphinx-autodoc-typehints",
+    "sphinx-design>=0.6.1",
+]
+all = [
+    { include-group = "dev" },
+    { include-group = "docs" }
+]
+
+[tool.uv.dependency-groups]
+docs = { requires-python = ">=3.11.5" }
+all = { requires-python = ">=3.11.5" }
+
+[tool.hatch.build.targets.wheel]
+packages = ["throttled"]
+
+#[tool.uv]
+#index-url = "https://mirrors.tencent.com/pypi/simple/"
+
+[tool.ruff]
+line-length = 89
+
+[tool.ruff.lint]
+# Keep this list self-describing; CONTRIBUTING.md points agents here for lint facts.
+# Rule reference: https://docs.astral.sh/ruff/rules/
+select = [
+    "F",      # Pyflakes: catch undefined names, unused imports, and basic mistakes.
+    "E",      # pycodestyle errors: keep syntax and layout conventional.
+    "W",      # pycodestyle warnings: catch subtle style and whitespace issues.
+    "C90",    # mccabe complexity: keep functions small enough to review.
+    "I",      # isort: keep imports sorted and grouped.
+    "D",      # pydocstyle: require docstring presence and style checks.
+    "UP",     # pyupgrade: prefer modern Python 3.10+ syntax.
+    "SIM",    # flake8-simplify: use simpler equivalent code.
+    "G",      # flake8-logging-format: avoid unsafe logging format patterns.
+    "LOG",    # flake8-logging: use logging APIs consistently.
+    "N",      # pep8-naming: keep Python names conventional.
+    "TRY",    # tryceratops: keep exception handling explicit and readable.
+    "YTT",    # flake8-2020: avoid Python version compatibility traps.
+    "B",      # flake8-bugbear: catch likely bugs and risky patterns.
+    "T10",    # flake8-debugger: do not commit debugger breakpoints.
+    "T20",    # flake8-print: do not commit print-based diagnostics.
+    "C4",     # flake8-comprehensions: prefer clearer comprehensions.
+    "RET",    # flake8-return: keep return paths direct and explicit.
+    "PERF",   # Perflint: prefer efficient idioms in hot paths.
+    "PL",     # Pylint: apply design, readability, and correctness checks.
+    "PIE",    # flake8-pie: catch small code-quality issues.
+    "PYI006", # flake8-pyi: use preferred typing patterns in stubs.
+    "PYI062", # flake8-pyi: keep stub-style annotations valid.
+    "PYI063", # flake8-pyi: prefer PEP 570 positional-only syntax.
+    "PYI066", # flake8-pyi: avoid bad default values in stubs.
+    "ANN",    # flake8-annotations: require explicit type annotations.
+    "TCH",    # flake8-type-checking: move type-only imports under TYPE_CHECKING.
+    "PT",     # flake8-pytest-style: keep pytest tests idiomatic.
+]
+ignore = [
+    "D102",     # Allow undocumented public methods; document public API intent instead.
+    "D105",     # Allow magic methods to inherit meaning from Python protocols.
+    "D106",     # Allow nested public classes without duplicate docstrings.
+    "D107",     # Allow __init__ docs to live on the class docstring.
+    "D203",     # Do not require a blank line before class docstrings; avoid D211 conflict.
+    "D213",     # Keep multi-line summaries on the first line; avoid D212 conflict.
+    "D100",     # Allow modules without top-level docstrings.
+    "TRY003",   # Allow readable inline exception messages when custom classes add noise.
+]
+preview = true
+
+[tool.ruff.lint.pydocstyle]
+# Project docstrings use Sphinx/reStructuredText field syntax in CONTRIBUTING.md.
+# This value only selects Ruff/pydocstyle D-rule presets; it is not the docstring markup style.
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-third-party = ["throttled", "tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+# Allow too many arguments in throttled.py.
+"throttled.py" = ["PLR0913", "PLR0917", "UP038"]
+# T201 - Benchmark utility intentionally prints runtime output.
+"throttled/utils.py" = ["T201"]
+# PLR0913 - the Flask extension convention adds an ``app`` kwarg for eager init.
+"throttled/contrib/flask/limiter.py" = ["PLR0913"]
+"throttled/asyncio/contrib/fastapi/limiter.py" = ["PLR0913"]
+# D- Ignore docstring related rules in examples.
+# PLR0913 / PLR0917 - Ignore too many arguments in tests.
+"tests/**/*.py" = [
+    "D",
+    "PLR0913",
+    "PLR0917",
+    "ANN",
+    # PLR6301 - test method signatures follow pytest conventions (self-required).
+    "PLR6301",
+    # PLR2004 - magic values are idiomatic in test assertions.
+    "PLR2004",
+    # PT006 / PT007 - parametrize argument style is intentional.
+    "PT006",
+    "PT007",
+    # PT018 - keep compound assertions readable as-is.
+    "PT018",
+    # PLR6201 - container literals are fine in test parametrize bodies.
+    "PLR6201",
+]
+# D - Ignore docstring related rules in examples.
+# T201 - Ignore use of print statements in examples.
+"examples/*.py" = ["D", "T201"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "valkey: store contract tests (set VALKEY_URL to use a live Valkey server)",
+]
+
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+
+# Tests intentionally stay untyped: pytest fixtures, parametrize and async
+# decorators would otherwise require pervasive annotation noise that obscures
+# the test intent. Limit strict typing to the ``throttled`` package itself.
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+disallow_untyped_calls = false
+warn_return_any = false
